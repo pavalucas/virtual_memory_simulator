@@ -7,10 +7,10 @@ typedef struct
     unsigned int physicalAddr;
     char R;
     char M;
-    time_t lastAcessed;
+    int lastAcessed;
 } PageTable;
 
-int getPageIndex(unsigned int addr, int pageSize)
+unsigned int getPageIndex(unsigned int addr, int pageSize)
 {
     if(pageSize == 8)
         return addr >> 13;
@@ -18,20 +18,22 @@ int getPageIndex(unsigned int addr, int pageSize)
         return addr >> 14;
     else if(pageSize == 32)
         return addr >> 15;
+		return 0;
 }
 
-int readLogFile(char* fileName, unsigned int addr[], char rw[])
+int getPageTableSize(int pageSize)
 {
-	FILE* fp = fopen(fileName, "r");
-	int i = 0;
-	while(fscanf(fp, "%x %c", &addr[i], &rw[i]) == 2)
-		i++;
-	return i;
+	if(pageSize == 8)
+		return 1<<19;
+	else if(pageSize == 16)
+		return 1<<18;
+	else if(pageSize == 32)
+		return 1<<17;
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    printf("Entrou\n");
 	if (argc < 5)
     {
     	printf("Error! 5 parameters are necessary!\n");
@@ -39,24 +41,38 @@ int main(int argc, char *argv[])
     }
 
     char* replacementAlg = argv[1];
-    char* adressFile = argv[2];
+    char* addressFile = argv[2];
     int pageSize = atoi(argv[3]);
     int physicalMemorySize = atoi(argv[4]);
-	unsigned int addr[MAXN];
-	char rw[MAXN];
+	unsigned int addr;
+	char rw;
 	int i;
 	int numberOfAddr;
-    PageTable pageTableEntries[520000];
+  PageTable* pageTableEntries;
+	int time = 0;
 
-	for(i = 0; i < argc; i++)
-		printf("%s ", argv[i]);
-	printf("\n");
+	printf("Executando o simulador...\n");
+	printf("Arquivo de entrada: %s\n", addressFile);
+	printf("Tamanho da memoria fisica: %d MB\n", physicalMemorySize);
+	printf("Tamanho das paginas: %d KB\n", pageSize);
+	printf("Alg de substituicao: %s\n", replacementAlg);
+	
+	int pageTableSize = getPageTableSize(pageSize);
+	printf("Page table size: %d\n", pageTableSize);
+	pageTableEntries = (PageTable*)malloc(sizeof(PageTable) * pageTableSize);
 
-	numberOfAddr = readLogFile(adressFile, addr, rw);
-
-	printf("Number of adresses: %d\n", numberOfAddr);
-	for(i = 0; i < numberOfAddr; i++)
+	FILE* fp = fopen(addressFile, "r");
+	if(fp == NULL)
 	{
-		printf("%x %c\n", addr[i], rw[i]);
+		printf("File not found!");
+		exit(2);
 	}
+
+	int qntAddr = 0;
+	while(fscanf(fp, "%x %c", &addr, &rw) == 2)
+	{
+		qntAddr++;
+	}
+
+	printf("Number of adresses: %d\n", qntAddr);
 }
