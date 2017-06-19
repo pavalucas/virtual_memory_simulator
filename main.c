@@ -4,11 +4,10 @@
 
 typedef struct 
 {
-    unsigned int physicalAddr;
     char R;
     char M;
     int lastAcessed;
-} PageTable;
+} PageFrame;
 
 unsigned int getPageIndex(unsigned int addr, int pageSize)
 {
@@ -18,7 +17,7 @@ unsigned int getPageIndex(unsigned int addr, int pageSize)
         return addr >> 14;
     else if(pageSize == 32)
         return addr >> 15;
-		return 0;
+	return 0;
 }
 
 int getPageTableSize(int pageSize)
@@ -30,6 +29,11 @@ int getPageTableSize(int pageSize)
 	else if(pageSize == 32)
 		return 1<<17;
 	return 0;
+}
+
+int getPageFrameSize(int pageSize, int physMemSize)
+{
+    return ((physMemSize * 1024) / pageSize);
 }
 
 int main(int argc, char *argv[])
@@ -48,7 +52,8 @@ int main(int argc, char *argv[])
 	char rw;
 	int i;
 	int numberOfAddr;
-  PageTable* pageTableEntries;
+    int* pageTable;
+    PageFrame* pageFrame;
 	int time = 0;
 
 	printf("Executando o simulador...\n");
@@ -58,8 +63,11 @@ int main(int argc, char *argv[])
 	printf("Alg de substituicao: %s\n", replacementAlg);
 	
 	int pageTableSize = getPageTableSize(pageSize);
+    int pageFrameSize = getPageFrameSize(pageSize, physicalMemorySize);
 	printf("Page table size: %d\n", pageTableSize);
-	pageTableEntries = (PageTable*)malloc(sizeof(PageTable) * pageTableSize);
+    printf("Page frame size: %d\n", pageFrameSize);
+	pageTable = (int*)malloc(sizeof(int) * pageTableSize);
+    pageFrame = (PageFrame*)malloc(sizeof(PageFrame) * pageFrameSize);
 
 	FILE* fp = fopen(addressFile, "r");
 	if(fp == NULL)
