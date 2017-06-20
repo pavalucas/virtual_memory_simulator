@@ -84,6 +84,11 @@ int main(int argc, char *argv[])
 	int qntAddr = 0;
 	
 
+	for(i=0; i<pageTableSize; i++)
+	{
+		pageTable[i] = -1;
+	}
+
 	while(fscanf(fp, "%x %c", &addr, &rw) == 2)
 	{
 		int newPageIndex = getPageIndex(addr, pageSize);
@@ -93,12 +98,13 @@ int main(int argc, char *argv[])
 
 		PageFrame newPage;
 
-		if(pagesEmpty != 0)
+		if(indexNewPageFrame == -1)
 		{
-			if(indexNewPageFrame == -1)
+
+			if(pagesEmpty != 0)
 			{
 				newPage.lastAcessed = time;
-		
+
 				if(rw == 'W')
 				{
 					newPage.R = 0;
@@ -113,36 +119,35 @@ int main(int argc, char *argv[])
 				pagesEmpty--;
 				oldPageIndex = pageFrameSize - pagesEmpty;
 				pageFrame[oldPageIndex] = newPage;
-				pageTable[newPageIndex] = oldPageIndex;
+				pageTable[newPageIndex] = oldPageIndex;	
 			}
 			else
 			{
-				if(rw == 'W')
+				if(strcmp(replacementAlg, "NRU")==0)
 				{
-					pageFrame[indexNewPageFrame].M = 1;
-				}
-				else
-				{
-					pageFrame[indexNewPageFrame].R = 1;
-				}
-				pageFrame[indexNewPageFrame].lastAcessed = time;
 
+				}
+				else if(strcmp(replacementAlg, "LRU")==0)
+				{}
+				else if(strcmp(replacementAlg, "NOVO") == 0)
+				{}
 			}
-
 		}
-
 		else
 		{
-			if(strcmp(replacementAlg, "NRU")==0)
-			{}
-			else if(strcmp(replacementAlg, "NRU")==0)
-			{}
-			else if(strcmp(replacementAlg, "NOVO") == 0)
-			{}
+			if(rw == 'W')
+			{
+				pageFrame[indexNewPageFrame].M = 1;
+			}
+			else
+			{
+				pageFrame[indexNewPageFrame].R = 1;
+			}
+			pageFrame[indexNewPageFrame].lastAcessed = time;
 		}
 
 		time++;
-		qntAddr++;		
+		qntAddr++;
 	}
 
 	printf("Number of adresses: %d\n", qntAddr);
