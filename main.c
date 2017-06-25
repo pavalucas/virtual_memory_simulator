@@ -119,32 +119,6 @@ void NRU(int* pageTable,
 
 				for(i = 1; i < pageFrameSize; i++)
 				{
-					// if(choosed.R == 0)
-					// {
-					// 	if(choosed.M == 0)
-					// 	{
-					// 		break;
-					// 	}
-					// 	else if(pageFrame[i].M == 0)
-					// 	{
-					// 		choosed = pageFrame[i];
-					// 		choosedIndex = i;
-					// 	}
-					// }
-					// else
-					// {
-					// 	if(pageFrame[i].R == 0)
-					// 	{
-					// 		choosed = pageFrame[i];
-					// 		choosedIndex = i;
-					// 	}
-					// 	else if(pageFrame[i].M == 0)
-					// 	{
-					// 		choosed = pageFrame[i];
-					// 		choosedIndex = i;
-					// 	}
-					// }
-
 					if(pageFrame[i].R == 0 && pageFrame[i].M == 0)
 					{
 						choosed = pageFrame[i];
@@ -313,6 +287,116 @@ void LRU(int* pageTable,
 	printf("Numero de Paginas escritas: %d\n", qtPhysMemAcess);
 }
 
+void NOVO(int* pageTable,
+		 PageFrame* pageFrame,
+		 int pageFrameSize,
+		 int pageSize,
+		 int deltaTime,
+		 FILE* fp)
+{
+	unsigned int addr;
+	char rw;
+	int i;
+	int qtPageFault = 0;
+	int qtPhysMemAcess = 0;
+	int pagesEmpty = pageFrameSize;
+	unsigned long long time = 1;
+	int* freqArr = (int*)malloc(sizeof(int) * pageFrameSize);
+	memset(freqArr, 0, sizeof(freqArr));
+
+	while(fscanf(fp, "%x %c", &addr, &rw) == 2)
+	{
+		int newPageIndex = getPageIndex(addr, pageSize);
+		int indexNewPageFrame = pageTable[newPageIndex];
+		int pageFrameIndex; 
+
+		// Setting all R bit to zero
+		if(time % deltaTime == 0)
+		{
+			for(i = 0; i < pageFrameSize; i++)
+			{
+				pageFrame[i].R = 0;
+			}
+		}
+
+		if(indexNewPageFrame == -1)
+		{
+			if(pagesEmpty != 0)
+			{
+				pageFrameIndex = pageFrameSize - pagesEmpty;
+				putPageInEmptyPageFrame(pageTable, pageFrame, newPageIndex, pageFrameIndex, rw, time);
+				freqArr[pageFrameIndex] = 1;
+				pagesEmpty--;
+				#ifdef _DEBUG
+					printf("Pagina %d -> Moldura de pagina %d\n", newPageIndex, pageFrameIndex);
+				#endif
+			}
+			else // page fault
+			{
+				PageFrame choosed = pageFrame[0];
+				int choosedIndex = 0;
+
+				for(i = 1; i < pageFrameSize; i++)
+				{
+					if(freqArr[i] < freqArr[choosedIndex])
+					{
+						choosed = pageFrame[i];
+						choosedIndex = i;
+					}
+					else if(freqArr[i] == freqArr[choosedIndex])
+					{
+						if(pageFrame[i].lastAcessed > pageFrame[choosedIndex].lastAcessed)
+						{
+							choosed = pageFrame[i];
+							choosedIndex = i;
+						}
+					}
+				}
+
+				#ifdef _DEBUG
+					printf("Page fault!\n");
+					printf("Pagina %d -> Retirada\n", choosed.pageIndex);
+					printf("Pagina %d -> Moldura de pagina %d.\n", newPageIndex, choosedIndex);
+				#endif
+
+				if(choosed.M == 1)
+				{
+					#ifdef _DEBUG
+						printf("Acesso a memoria fisica!\n");
+					#endif
+					qtPhysMemAcess++;
+				}
+
+				if(rw == 'W')
+					pageFrame[choosedIndex].M = 1;
+				else
+					pageFrame[choosedIndex].M = 0;
+				pageFrame[choosedIndex].R = 1;
+				pageFrame[choosedIndex].lastAcessed = time;
+				freqArr[choosedIndex] = 1;
+
+				pageTable[choosed.pageIndex] = -1;
+				pageTable[newPageIndex] = choosedIndex;
+
+				qtPageFault++;
+			}
+		}
+		else
+		{
+			#ifdef _DEBUG
+				printf("Pagina %d -> Encontrada na moldura de pagina %d\n", newPageIndex, indexNewPageFrame);
+			#endif
+
+			updatePageFrame(pageFrame, indexNewPageFrame, rw, time);
+			freqArr[indexNewPageFrame]++;
+		}
+
+		time++;
+	}
+	printf("Numero de Faltas de Páginas: %d\n", qtPageFault);
+	printf("Numero de Paginas escritas: %d\n", qtPhysMemAcess);
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc < 5)
@@ -379,6 +463,8 @@ int main(int argc, char *argv[])
 		LRU(pageTable, pageFrame, pageFrameSize, pageSize, deltaTime, fp);
 	}
 	else if(strcmp(replacementAlg, "NOVO") == 0)
-	{}
+	{
+		NOVO(pageTable, pageFrame, pageFrameSize, pageSize, deltaTime, fp);
+	}
 
 }
