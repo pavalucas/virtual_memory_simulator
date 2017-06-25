@@ -6,6 +6,7 @@
 
 typedef struct
 {
+	int pageIndex;
 	char R;
 	char M;
 	int lastAcessed;
@@ -38,7 +39,44 @@ int getPageFrameSize(int pageSize, int physMemSize)
 	return ((physMemSize * 1024) / pageSize);
 }
 
-void NRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, int deltaTime, FILE* fp)
+void putPageInEmptyPageFrame(int* pageTable,
+							 PageFrame* pageFrame,
+							 int newPageIndex,
+							 int pageFrameIndex,
+							 char rw,
+							 unsigned long long time)
+{
+	PageFrame newPage;
+	newPage.lastAcessed = time;
+	newPage.pageIndex = newPageIndex;
+	if(rw == 'W')
+		newPage.M = 1;
+	else
+		newPage.M = 0;
+	newPage.R = 1;
+
+	pageFrame[pageFrameIndex] = newPage;
+	pageTable[newPageIndex] = pageFrameIndex;
+}
+
+void updatePageFrame(PageFrame* pageFrame,
+					 int indexNewPageFrame,
+					 char rw,
+					 int time)
+{
+	if(rw == 'W')
+		pageFrame[indexNewPageFrame].M = 1;
+	pageFrame[indexNewPageFrame].R = 1;
+
+	pageFrame[indexNewPageFrame].lastAcessed = time;
+}
+
+void NRU(int* pageTable,
+		 PageFrame* pageFrame,
+		 int pageFrameSize,
+		 int pageSize,
+		 int deltaTime,
+		 FILE* fp)
 {
 	unsigned int addr;
 	char rw;
@@ -52,9 +90,7 @@ void NRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 	{
 		int newPageIndex = getPageIndex(addr, pageSize);
 		int indexNewPageFrame = pageTable[newPageIndex];
-		int oldPageIndex;
-
-		PageFrame newPage;
+		int pageFrameIndex;
 
 		// Setting all R bit to zero
 		if(time % deltaTime == 0)
@@ -69,59 +105,68 @@ void NRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 		{
 			if(pagesEmpty != 0)
 			{
-				newPage.lastAcessed = time;
-
-				if(rw == 'W')
-					newPage.M = 1;
-				else
-					newPage.M = 0;
-				newPage.R = 1;
-
-				oldPageIndex = pageFrameSize - pagesEmpty;
+				pageFrameIndex = pageFrameSize - pagesEmpty;
+				putPageInEmptyPageFrame(pageTable, pageFrame, newPageIndex, pageFrameIndex, rw, time);
 				pagesEmpty--;
-				pageFrame[oldPageIndex] = newPage;
-				pageTable[newPageIndex] = oldPageIndex;
 				#ifdef _DEBUG
-					printf("Nova page frame %d preenchida\n", oldPageIndex);
+					printf("Pagina %d -> Moldura de pagina %d\n", newPageIndex, pageFrameIndex);
 				#endif
 			}
-			else
+			else // page fault
 			{
 				PageFrame choosed = pageFrame[0];
 				int choosedIndex = 0;
 
 				for(i = 1; i < pageFrameSize; i++)
 				{
-					if(choosed.R == 0)
+					// if(choosed.R == 0)
+					// {
+					// 	if(choosed.M == 0)
+					// 	{
+					// 		break;
+					// 	}
+					// 	else if(pageFrame[i].M == 0)
+					// 	{
+					// 		choosed = pageFrame[i];
+					// 		choosedIndex = i;
+					// 	}
+					// }
+					// else
+					// {
+					// 	if(pageFrame[i].R == 0)
+					// 	{
+					// 		choosed = pageFrame[i];
+					// 		choosedIndex = i;
+					// 	}
+					// 	else if(pageFrame[i].M == 0)
+					// 	{
+					// 		choosed = pageFrame[i];
+					// 		choosedIndex = i;
+					// 	}
+					// }
+
+					if(pageFrame[i].R == 0 && pageFrame[i].M == 0)
 					{
-						if(choosed.M == 0)
-						{
-							break;
-						}
-						else if(pageFrame[i].M == 0)
-						{
-							choosed = pageFrame[i];
-							choosedIndex = i;
-						}
+						choosed = pageFrame[i];
+						choosedIndex = i;
+						break;
 					}
-					else
+					else if(pageFrame[i].R == 0 && choosed.R == 1)
 					{
-						if(pageFrame[i].R == 0)
-						{
-							choosed = pageFrame[i];
-							choosedIndex = i;
-						}
-						else if(pageFrame[i].R == 0) 
-						{
-							choosed = pageFrame[i];
-							choosedIndex = i;														
-						}
+						choosed = pageFrame[i];
+						choosedIndex = i;
+					}
+					else if(pageFrame[i].M == 0 && choosed.R == 1 && choosed.M == 1)
+					{
+						choosed = pageFrame[i];
+						choosedIndex = i;
 					}
 				}
 
 				#ifdef _DEBUG
 					printf("Page fault!\n");
-					printf("Pagina %d sera retirada.\n", choosedIndex);
+					printf("Pagina %d -> Retirada\n", choosed.pageIndex);
+					printf("Pagina %d -> Moldura de pagina %d.\n", newPageIndex, choosedIndex);
 				#endif
 
 				if(choosed.M == 1)
@@ -139,6 +184,7 @@ void NRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 				pageFrame[choosedIndex].R = 1;
 				pageFrame[choosedIndex].lastAcessed = time;
 
+				pageTable[choosed.pageIndex] = -1;
 				pageTable[newPageIndex] = choosedIndex;
 
 				qtPageFault++;
@@ -147,24 +193,25 @@ void NRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 		else
 		{
 			#ifdef _DEBUG
-				printf("Page %d hit!\n", indexNewPageFrame);
+				printf("Pagina %d -> Encontrada na moldura de pagina %d\n", newPageIndex, indexNewPageFrame);
 			#endif
 
-			if(rw == 'W')
-				pageFrame[indexNewPageFrame].M = 1;
-			pageFrame[indexNewPageFrame].R = 1;
-
-			pageFrame[indexNewPageFrame].lastAcessed = time;
+			updatePageFrame(pageFrame, indexNewPageFrame, rw, time);
 		}
 
 		time++;
 	}
 	printf("Numero de Faltas de Páginas: %d\n", qtPageFault);
 	printf("Numero de Paginas escritas: %d\n", qtPhysMemAcess);
-	
+
 }
 
-void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, int deltaTime, FILE* fp)
+void LRU(int* pageTable,
+		 PageFrame* pageFrame,
+		 int pageFrameSize,
+		 int pageSize,
+		 int deltaTime,
+		 FILE* fp)
 {
 	unsigned int addr;
 	char rw;
@@ -180,9 +227,7 @@ void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 	{
 		int newPageIndex = getPageIndex(addr, pageSize);
 		int indexNewPageFrame = pageTable[newPageIndex];
-		int oldPageIndex;
-
-		PageFrame newPage;
+		int pageFrameIndex;
 
 		// Setting all R bit to zero
 		if(time % deltaTime == 0)
@@ -208,25 +253,16 @@ void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 		{
 			if(pagesEmpty != 0)
 			{
-				newPage.lastAcessed = time;
-
-				if(rw == 'W')
-					newPage.M = 1;
-				else
-					newPage.M = 0;
-				newPage.R = 1;
-
-				oldPageIndex = pageFrameSize - pagesEmpty;
+				pageFrameIndex = pageFrameSize - pagesEmpty;
+				putPageInEmptyPageFrame(pageTable, pageFrame, newPageIndex, pageFrameIndex, rw, time);
 				pagesEmpty--;
-				pageFrame[oldPageIndex] = newPage;
-				pageTable[newPageIndex] = oldPageIndex;
 				#ifdef _DEBUG
-					printf("Nova page frame %d preenchida\n", oldPageIndex);
+					printf("A pagina %d foi colocada na moldura de pagina %d\n", newPageIndex, pageFrameIndex);
 				#endif
 			}
-			else
+			else // page fault
 			{
-				int minValue = INT_MAX;
+				unsigned minValue = UINT_MAX;
 				int minPos;
 				for(i = 0; i < pageFrameSize; i++)
 				{
@@ -238,7 +274,8 @@ void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 				}
 				#ifdef _DEBUG
 					printf("Page fault!\n");
-					printf("Pagina %d sera retirada.\n", minPos);
+					printf("Pagina %d sera retirada. Pagina %d sera colocada na moldura de pagina %d.\n",
+						pageFrame[minPos].pageIndex, newPageIndex, minPos);
 				#endif
 				if(pageFrame[minPos].M == 1)
 				{
@@ -255,6 +292,7 @@ void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 				pageFrame[minPos].R = 1;
 				pageFrame[minPos].lastAcessed = time;
 
+				pageTable[pageFrame[minPos].pageIndex] = -1;
 				pageTable[newPageIndex] = minPos;
 
 				qtPageFault++;
@@ -263,14 +301,10 @@ void LRU(int* pageTable, PageFrame* pageFrame, int pageFrameSize, int pageSize, 
 		else
 		{
 			#ifdef _DEBUG
-				printf("Page %d hit!\n", indexNewPageFrame);
+				printf("Pagina %d foi encontrada na moldura de pagina %d\n", newPageIndex, indexNewPageFrame);
 			#endif
 
-			if(rw == 'W')
-				pageFrame[indexNewPageFrame].M = 1;
-			pageFrame[indexNewPageFrame].R = 1;
-
-			pageFrame[indexNewPageFrame].lastAcessed = time;
+			updatePageFrame(pageFrame, indexNewPageFrame, rw, time);
 		}
 
 		time++;
