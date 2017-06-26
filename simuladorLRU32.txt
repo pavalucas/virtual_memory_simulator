@@ -1,0 +1,9 @@
+Executando o simulador...
+Arquivo de entrada: simulador.log
+Tamanho da memoria fisica: 1 MB
+Tamanho das paginas: 32 KB
+Alg de substituicao: LRU
+Page table size: 131072
+Page frame size: 32
+Numero de Faltas de Páginas: 2550
+Numero de Paginas escritas: 1934

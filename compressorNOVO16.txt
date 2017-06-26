@@ -1,0 +1,9 @@
+Executando o simulador...
+Arquivo de entrada: compressor.log
+Tamanho da memoria fisica: 1 MB
+Tamanho das paginas: 16 KB
+Alg de substituicao: NOVO
+Page table size: 262144
+Page frame size: 64
+Numero de Faltas de Páginas: 195
+Numero de Paginas escritas: 62

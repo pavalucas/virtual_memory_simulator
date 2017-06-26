@@ -1,3 +1,4 @@
+// Alunos: Handel Scholze (1512479) e Lucas Pavanelli (1511341)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -308,7 +309,7 @@ void NOVO(int* pageTable,
 	{
 		int newPageIndex = getPageIndex(addr, pageSize);
 		int indexNewPageFrame = pageTable[newPageIndex];
-		int pageFrameIndex; 
+		int pageFrameIndex;
 
 		// Setting all R bit to zero
 		if(time % deltaTime == 0)
