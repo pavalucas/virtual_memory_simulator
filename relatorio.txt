@@ -2,36 +2,66 @@ Alunos: Handel Scholze (1512479) e Lucas Pavanelli (1511341)
 
 Compilação:
 ------------------
-gcc -o main main.c
+gcc -o simulador simulador.c
 
 Compilação modo DEBUG:
 ------------------
-gcc -o main main.c -D_DEBUG
+gcc -o simulador simulador.c -D_DEBUG
 
 Executar:
 -------------
-./main
+./simulador
 
 Resumo do projeto:
 ----------------------
 
-O simulador foi organizado de tal forma que para cada algoritmo existe uma função que o implementa e, além disso, existem funções auxiliares que implementam certas instruções que são comuns a todos os algoritmos. Um exemplo de função auxiliar é calcular o índice de uma página dado seu endereço completo ou colocar em uma moldura de página vazia uma página.
+O simulador foi organizado de tal forma que para cada algoritmo
+existe uma função que o implementa e, além disso, existem funções
+auxiliares que implementam certas instruções que são comuns a
+todos os algoritmos. Um exemplo de função auxiliar é calcular
+o índice de uma página dado seu endereço completo ou colocar em
+uma moldura de página vazia uma página.
 
-No nosso simulador duas estruturas de dados são utilizadas por todos os algoritmos:
-    1) Vetor de inteiros que guarda para cada página qual é a sua moldura de página correspondente e caso esta página não esteja na memória física guardamos -1.
-    2) Vetor de PageFrame, em que PageFrame é um struct que tem os flags R e M, um inteiro que guarda o instante de último acesso (lastAcessed) e um inteiro que guarda o índice da página que está em certa moldura, que guarda as informações sobre as molduras de página.
+No nosso simulador duas estruturas de dados são utilizadas por
+todos os algoritmos:
+    1) Vetor de inteiros que guarda para cada página qual é a
+    sua moldura de página correspondente e caso esta página
+    não esteja na memória física guardamos -1.
+    2) Vetor de PageFrame, em que PageFrame é um struct que
+    tem os flags R e M, um inteiro que guarda o instante de
+    último acesso (lastAcessed) e um inteiro que guarda o
+    índice da página que está em certa moldura, que guarda
+    as informações sobre as molduras de página.
 
-Para o algoritmo LRU foi utilizado um vetor de inteiros sem sinal (ageArr) o quão recentemente cada moldura de página foi acessada. Para cada intervalo de tempo esse vetor é atualizado conforme o algoritmo do envelhecimento.
+Para o algoritmo LRU foi utilizado um vetor de inteiros sem
+sinal (ageArr) o quão recentemente cada moldura de página foi
+acessada. Para cada intervalo de tempo esse vetor é atualizado
+conforme o algoritmo do envelhecimento.
+
+Para o algoritmo NRU somente foi necessário usar as duas
+estruturas comuns a todos os algoritmos.
+
+As estruturas utilizadas pelo algoritmo NOVO estão descritas
+a seguir.
+
 
 Descrição algoritmo NOVO:
 ---------------------------
 
-A ideia do nosso algoritmo NOVO é quando ocorrer um page-fault escolher a página que menos foi acessada e caso ocorra um empate escolher a página menos recentemente acessada. Para isso utilizamos uma estrutura de dados auxiliar que guardar quantas vezes cada página que está numa moldura de página foi acessada e usamos o campo lastAcessed da estrutura da moldura de página para saber a que foi menos recentemente acessada.
+A ideia do nosso algoritmo NOVO é quando ocorrer um page-fault
+escolher a página que menos foi acessada e caso ocorra um empate
+escolher a página menos recentemente acessada. Para isso utilizamos
+uma estrutura de dados auxiliar que guardar quantas vezes cada
+página que está numa moldura de página foi acessada e usamos o
+campo lastAcessed da estrutura da moldura de página para saber a
+que foi menos recentemente acessada.
 
 Análise do desempenho:
 --------------------------
 
-Para fazer a análise rodamos o simulador para tamanhos de página 16 KB e 32 KB e com tamanho de memória física igual a 1 MB. Segue abaixo os resultados:
+Para fazer a análise rodamos o simulador para tamanhos de página
+16 KB e 32 KB e com tamanho de memória física igual a 1 MB.
+Segue abaixo os resultados:
 
 1) Arquivo compilador.log
     -> Página 16 KB:
@@ -117,4 +147,9 @@ Para fazer a análise rodamos o simulador para tamanhos de página 16 KB e 32 KB
         NOVO - Numero de Faltas de Páginas: 2385
                Numero de Paginas escritas: 1843
 
-Pelos resultados acima podemos ver que o algoritmo NOVO supera os outros nos dois quesitos para todos programas, exceto para o compressor em que seu número de páginas escritas é maior que o do NRU. É possivel perceber também que para o arquivo matrix.log, o algoritmo NOVO supera por muito os outros dois tendo por volta de 1000 page-fault a menos.
+Pelos resultados acima podemos ver que o algoritmo NOVO supera
+os outros dois algoritmos nos dois quesitos para todos programas,
+exceto para o compressor em que seu número de páginas escritas é 
+maior que o do NRU. É possivel perceber também que para o arquivo
+matrix.log, o algoritmo NOVO supera por muito os outros dois tendo
+por volta de 1000 page-fault a menos.
